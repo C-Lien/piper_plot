@@ -1,6 +1,6 @@
-""" 
+"""
 Author: Christopher Lien
-Date: 20220506
+Date: 20220906
 Version: 1.0
 """
 
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import pandas as pd
-from imageio import imread
+from imageio.v2 import imread
 from math import sqrt
 
 
@@ -26,7 +26,7 @@ class Main():
                      'Mg':12,'K':39}
 
     def build_meq_dict(self, ):
-        """Read xlsm file and parse data to list[dict{}]; 
+        """Read xlsm file and parse data to list[dict{}];
         convert from mg/L to meq
         """
         df = pd.read_excel(self.xlsm_loc)
@@ -44,7 +44,7 @@ class Main():
                 dict_meq[key] = value
             list_meq.append(dict_meq)
         self.normalise(list_meq)
-    
+
     def normalise(self, list_meq):
         """Generate new list[dict{}] of parsed xlsm data to normalised values
         for generating x,y coordinates for plotting.
@@ -78,8 +78,18 @@ class Main():
                 i['Mg'] + i['Ca']+i['K']+i['Na']
                 ) * 100
             list_norm.append(dict_norm)
+        list_norm = self.hide_legend(list_norm)
         self.display(list_norm)
-        
+
+    def hide_legend(self, list_norm):
+        dup_list = []
+        for i in list_norm:
+            if i['Bore_ID'] in dup_list:
+                i['Bore_ID'] = '_'+i['Bore_ID']
+            else:
+                dup_list.append(i['Bore_ID'])
+        return list_norm
+
     def display(self, list_norm):
         """Display method for parsing data through matplotlib, save file once
         complete.
@@ -90,12 +100,12 @@ class Main():
         plt.figure(figsize=(20,15))
         plt.imshow(np.flipud(self.image))
         for i in list_norm:
-            self.coordinate(i['Ca'], i['Mg'], i['Cl'], i['SO4'], i['Bore_ID'], 
+            self.coordinate(i['Ca'], i['Mg'], i['Cl'], i['SO4'], i['Bore_ID'],
                             i['Color_ID'], i['Symbol_ID'], i['Size'])
         plt.ylim(0,830)
         plt.xlim(0,900)
         plt.axis('off')
-        plt.legend(loc='upper right',prop={'size':10}, frameon=False, 
+        plt.legend(loc='upper right',prop={'size':10}, frameon=False,
                    scatterpoints=1)
         out_fol = os.path.join(self.folder,"output")
         fol_exists = os.path.exists(out_fol)
@@ -105,7 +115,7 @@ class Main():
         plt.savefig(sav_loc_png)
         print("Output Complete to %s. Exiting." % (sav_loc_png))
         exit
-            
+
     def coordinate(self, ca, mg, cl, so4, label, color, marker, size):
         """Convert data to x,y coordinates for plotting through matplotlib.
 
@@ -131,14 +141,14 @@ class Main():
         yanion = 40 + (so4 * sqrt(3) / 2) * 3.6
         xdiam = 0.5 * (xcation + xanion + (yanion - ycation) / sqrt(3))
         ydiam = 0.5 * (yanion + ycation + sqrt(3) * (xanion - xcation))
-        list_coord.append(plt.scatter(xcation,ycation,zorder=zorder,c=color, 
-                                      s=size, edgecolors=edge_col,label=label, 
+        list_coord.append(plt.scatter(xcation,ycation,zorder=zorder,c=color,
+                                      s=size, edgecolors=edge_col,label=label,
                                       marker=marker))
-        list_coord.append(plt.scatter(xanion,yanion,zorder=zorder,c=color, 
-                                      s=size, edgecolors=edge_col, 
+        list_coord.append(plt.scatter(xanion,yanion,zorder=zorder,c=color,
+                                      s=size, edgecolors=edge_col,
                                       marker=marker))
-        list_coord.append(plt.scatter(xdiam,ydiam,zorder=zorder,c=color, 
-                                      s=size, edgecolors=edge_col, 
+        list_coord.append(plt.scatter(xdiam,ydiam,zorder=zorder,c=color,
+                                      s=size, edgecolors=edge_col,
                                       marker=marker))
         return list_coord
 
@@ -162,6 +172,6 @@ class Main():
         if file_exists is True:
             print("File %s found." % (csv))
         return file_location
-        
+
 if __name__=="__main__":
     Main().build_meq_dict()
