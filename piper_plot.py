@@ -1,49 +1,79 @@
 """
 Author: Christopher Lien
-Date: 20220906
-Version: 1.0
+Date: 20220915
+Version: 1.1
 """
 
 import matplotlib.pyplot as plt
 import os
+import sys
 import numpy as np
-import pandas as pd
-from imageio.v2 import imread
+import openpyxl as py
+from PIL import Image
 from math import sqrt
+from tkinter import filedialog
 
 
 class Main():
     def __init__(self, ):
         self.folder = os.path.dirname(__file__)
-        xlsm = "piper_data.xlsm"
-        self.xlsm_loc = self.check_file("", xlsm)
+        self.xlsm_dir = self.get_xlsm_location()
         image = "piper_background.png"
-        image_loc = self.check_file("background",image)
-        self.image = imread(image_loc)
+        image_dir = self.resource_path(image)
+        self.image = Image.open(image_dir)
         self.header = ['Bore_ID','Color_ID','HCO3','CO3','SO4','Cl','Na','Ca',
                        'Mg','K', 'Symbol_ID', 'Size']
         self.ions = {'HCO3':61,'CO3':30,'Cl':35,'SO4':48,'Na':23,'Ca':20,
                      'Mg':12,'K':39}
 
-    def build_meq_dict(self, ):
-        """Read xlsm file and parse data to list[dict{}];
-        convert from mg/L to meq
+    def get_xlsm_location(self, ):
+        xlsm_dir = filedialog.askopenfilename(initialdir="/",
+                                              title="Select file",
+                                              filetypes=(("piper data", "*.xlsm"),
+                                                         ("all files", "*.*"))
+                                              )
+
+        return xlsm_dir
+
+    def resource_path(self, image):
+        """Get absolute path to resource, works for dev and for PyInstaller
         """
-        df = pd.read_excel(self.xlsm_loc)
-        rows = len(df)
+        path = os.path.dirname(os.path.abspath(__file__))
+        base_path = getattr(sys, '_MEIPASS', path)
+
+        return os.path.join(base_path, image)
+
+    def build_meq_dict(self, ):
+        """Read xlsm file and parse data to list[dict{}]
+        """
+        workbook = py.load_workbook(self.xlsm_dir, data_only=True)
+        data = workbook.active
+        header = []
         list_meq = []
-        for row in range(rows):
+        for col in range(1, data.max_column+1):
+            header.append(data.cell(row=1,column=col).value)
+        for row in range (2, data.max_row):
             dict_meq = {}
-            for key in self.header:
-                value = df[key].loc[df.index[row]]
-                try:
-                    meq_val = self.ions[key]
-                    value = value/meq_val
-                except:
-                    pass
-                dict_meq[key] = value
+            for col in range(1, data.max_column+1):
+                dict_meq[header[col-1]]=data.cell(row=row,column=col).value
             list_meq.append(dict_meq)
-        self.normalise(list_meq)
+
+        """Create list[dict{}] of header data and convert from mg/L to meq
+        """
+        dict_list = []
+        for i in list_meq:
+            dict_meq = {}
+            for key, value in i.items():
+                for j in self.header:
+                    if key==j:
+                        try:
+                            meq_val = self.ions[key]
+                            value = value/meq_val
+                            dict_meq[key] = value
+                        except:
+                            dict_meq[key] = value
+            dict_list.append(dict_meq)
+        self.normalise(dict_list)
 
     def normalise(self, list_meq):
         """Generate new list[dict{}] of parsed xlsm data to normalised values
@@ -107,11 +137,8 @@ class Main():
         plt.axis('off')
         plt.legend(loc='upper right',prop={'size':10}, frameon=False,
                    scatterpoints=1)
-        out_fol = os.path.join(self.folder,"output")
-        fol_exists = os.path.exists(out_fol)
-        if fol_exists is False:
-            os.mkdir(out_fol)
-        sav_loc_png = os.path.join(out_fol,"piper.png")
+        file_loc = self.xlsm_dir.replace(".xlsm", "")
+        sav_loc_png = file_loc+"_piper_plot.png"
         plt.savefig(sav_loc_png)
         print("Output Complete to %s. Exiting." % (sav_loc_png))
         exit
@@ -151,27 +178,6 @@ class Main():
                                       s=size, edgecolors=edge_col,
                                       marker=marker))
         return list_coord
-
-    def check_file(self, sub, csv, ):
-        """Checks if the requested CSV exists within
-            declared sub-folder, returns FALSE if not
-            found.
-
-        Args:
-            sub (string): SUBFOLDER relative to py
-            csv (string): CSV name
-
-        Returns:
-            string: Return LOCATION if TRUE.
-        """
-        file_location = os.path.join(self.folder, sub, csv)
-        file_exists = os.path.exists(file_location)
-        if file_exists is False:
-            print("File %s not found in %s. Exiting." % (csv, file_location))
-            exit
-        if file_exists is True:
-            print("File %s found." % (csv))
-        return file_location
 
 if __name__=="__main__":
     Main().build_meq_dict()
