@@ -16,7 +16,6 @@ from tkinter import filedialog
 
 class Main():
     def __init__(self, ):
-        self.folder = os.path.dirname(__file__)
         self.xlsm_dir = self.get_xlsm_location()
         image = "piper_background.png"
         image_dir = self.resource_path(image)
