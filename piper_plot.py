@@ -1,7 +1,7 @@
 """
-Author: Christopher Lien
-Date: 20220915
-Version: 1.1
+Author:     Christopher Lien
+Date:       20220915
+Version:    1.1
 """
 
 import matplotlib.pyplot as plt
